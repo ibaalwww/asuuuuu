@@ -616,6 +616,8 @@ struct IbaalPlistEditorView: View {
     @StateObject private var model =
         IbaalPlistEditorModel()
 
+    @EnvironmentObject private var appState: AppState
+
     @State private var search = ""
 
     @State private var showPicker = false
@@ -706,6 +708,11 @@ struct IbaalPlistEditorView: View {
                     Menu {
 
                         Button {
+                            guard appState.deviceAccessActive else {
+                                model.message = "Device Access is not active. Run Device Access first."
+                                model.showingError = true
+                                return
+                            }
                             model.reloadSystemPlist()
                         } label: {
                             Label(
@@ -717,6 +724,11 @@ struct IbaalPlistEditorView: View {
                         Divider()
 
                         Button {
+                            guard appState.deviceAccessActive else {
+                                model.message = "Device Access is not active. Run Device Access first."
+                                model.showingError = true
+                                return
+                            }
                             model.overwriteSystemPlist()
                         } label: {
                             Label(
@@ -725,6 +737,7 @@ struct IbaalPlistEditorView: View {
                             )
                         }
                         .disabled(
+                            !appState.deviceAccessActive ||
                             !model.canOverwrite ||
                             model.isBusy
                         )
