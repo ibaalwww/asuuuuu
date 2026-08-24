@@ -9,18 +9,31 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Show Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          echo "Xcode:"
           xcodebuild -version
+          echo "Developer directory:"
+          xcode-select -p
+
+      - name: Verify source files
+        run: |
+          echo "Checking project..."
+
+          test -f "ibaal3105/ThreeOneOSFive.xcodeproj/project.pbxproj"
+          test -f "ibaal3105/ThreeOneOSFive/views/PListEditorView.swift"
+          test -f "ibaal3105/ThreeOneOSFive/views/SystemPlistOverwrite.swift"
+
+          echo "All required files found."
 
       - name: Clean
+        working-directory: ibaal3105
         run: |
           xcodebuild clean \
             -project ThreeOneOSFive.xcodeproj \
@@ -28,6 +41,7 @@ jobs:
             -configuration Release
 
       - name: Build
+        working-directory: ibaal3105
         run: |
           xcodebuild \
             -project ThreeOneOSFive.xcodeproj \
@@ -35,37 +49,41 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath "$GITHUB_WORKSPACE/build" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            DEVELOPMENT_TEAM="" \
             build
 
-      - name: Locate app
+      - name: Find app
         run: |
-          find "$GITHUB_WORKSPACE" \
+          echo "Searching for ibaal3105.app..."
+          find "$GITHUB_WORKSPACE/build" \
             -name "ibaal3105.app" \
             -type d \
             -print
 
-      - name: Package IPA staging
+      - name: Package IPA
         run: |
-          APP_PATH=$(find "$GITHUB_WORKSPACE" \
+          APP_PATH=$(find "$GITHUB_WORKSPACE/build" \
             -name "ibaal3105.app" \
             -type d \
             | head -n 1)
 
           if [ -z "$APP_PATH" ]; then
-            echo "ibaal3105.app tidak ditemukan"
+            echo "ERROR: ibaal3105.app not found."
             exit 1
           fi
 
+          rm -rf Payload
           mkdir -p Payload
+
           cp -R "$APP_PATH" Payload/ibaal3105.app
 
           zip -r ibaal3105-staging.ipa Payload
 
-      - name: Upload IPA
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ibaal3105-staging
           path: ibaal3105-staging.ipa
+          if-no-files-found: error
