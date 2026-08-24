@@ -626,6 +626,8 @@ struct IbaalPlistEditorView: View {
 
     @State private var showActionMenu = false
 
+    @State private var showDeviceAccess = false
+
     @State private var selectedNode: IbaalPlistNode?
 
     @State private var addParent: IbaalPlistNode?
@@ -704,6 +706,19 @@ struct IbaalPlistEditorView: View {
                         model.root == nil
                     )
 
+                    // DEVICE ACCESS — separate from the ACTION menu
+                    Button {
+                        appState.refreshDeviceAccessStatus()
+                        showDeviceAccess = true
+                    } label: {
+                        Image(
+                            systemName: appState.deviceAccessActive
+                                ? "checkmark.shield.fill"
+                                : "shield"
+                        )
+                    }
+                    .accessibilityLabel("Device Access")
+
                     // ACTION
                     Menu {
 
@@ -774,6 +789,13 @@ struct IbaalPlistEditorView: View {
                 IbaalDocumentPicker { url in
                     model.open(url)
                 }
+            }
+
+            .sheet(
+                isPresented: $showDeviceAccess
+            ) {
+                DeviceAccessView()
+                    .environmentObject(appState)
             }
 
             .sheet(
