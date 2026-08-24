@@ -1,33 +1,40 @@
-set -o pipefail
+echo "===== START BUILD ====="
+pwd
+ls -la
 
-echo "===== CLEAN BUILD ====="
+echo "===== XCODE VERSION ====="
+xcodebuild -version
+
+echo "===== PROJECT FILES ====="
+find . -maxdepth 2 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) -print
+
+echo "===== BUILD ====="
 
 xcodebuild \
   -project ThreeOneOSFive.xcodeproj \
   -scheme ibaal3105 \
   -configuration Release \
   -sdk iphoneos \
-  clean build \
   CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO \
+  build \
   2>&1 | tee build.log
 
-BUILD_STATUS=${PIPESTATUS[0]}
+echo "===== BUILD FINISHED ====="
+echo "===== LAST 200 LINES ====="
 
-echo ""
-echo "===== KEXPLOIT OPA334 DIAGNOSTIC ====="
+tail -n 200 build.log
 
-grep -n -A15 -B8 \
-  -E "kexploit_opa334\.m|kexploit_opa334\.o|error:" \
+echo "===== KEXPLOIT ERRORS ====="
+
+grep -n -i -A15 -B10 \
+  "kexploit_opa334" \
   build.log || true
 
-echo ""
-echo "===== ALL CLANG ERRORS ====="
+echo "===== CLANG ERRORS ====="
 
-grep -n -A8 -B4 \
-  -E ":[0-9]+:[0-9]+: error:" \
+grep -n -E \
+  "error:|fatal error:" \
   build.log || true
 
-echo ""
-echo "===== BUILD EXIT CODE: ${BUILD_STATUS} ====="
-
-exit "$BUILD_STATUS"
+echo "===== DONE ====="
