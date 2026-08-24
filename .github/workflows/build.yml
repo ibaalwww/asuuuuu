@@ -15,22 +15,50 @@ jobs:
       - name: Select Xcode
         run: |
           sudo xcode-select -s /Applications/Xcode_15.4.app
+          echo "===== XCODE ====="
           xcodebuild -version
 
-      - name: Inspect project
+      - name: Locate Xcode project
         run: |
-          echo "===== PROJECT FILES ====="
-          find . -maxdepth 3 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) -print
+          echo "===== PROJECTS ====="
 
-      - name: Build
+          find "$GITHUB_WORKSPACE" \
+            -maxdepth 6 \
+            \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) \
+            -print
+
+      - name: Build ibaal3105
         run: |
-          echo "===== START BUILD ====="
-          pwd
-          ls -la
+          echo "===== LOCATING PROJECT ====="
 
-          echo "===== XCODE VERSION ====="
-          xcodebuild -version
+          PROJECT=$(find "$GITHUB_WORKSPACE" \
+            -maxdepth 6 \
+            -name "ThreeOneOSFive.xcodeproj" \
+            -print -quit)
 
+          if [ -z "$PROJECT" ]; then
+            echo "ERROR: ThreeOneOSFive.xcodeproj tidak ditemukan."
+            echo ""
+            echo "===== AVAILABLE XCODE PROJECTS ====="
+            find "$GITHUB_WORKSPACE" \
+              -maxdepth 6 \
+              -name "*.xcodeproj" \
+              -print
+            exit 1
+          fi
+
+          echo "PROJECT FOUND:"
+          echo "$PROJECT"
+
+          PROJECT_DIR=$(dirname "$PROJECT")
+
+          echo ""
+          echo "===== PROJECT DIRECTORY ====="
+          echo "$PROJECT_DIR"
+
+          cd "$PROJECT_DIR"
+
+          echo ""
           echo "===== BUILD ====="
 
           xcodebuild \
@@ -41,24 +69,37 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build \
-            2>&1 | tee build.log
+            2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
       - name: Show build diagnostics
         if: always()
         run: |
           echo "===== LAST 200 LINES ====="
+
           tail -n 200 build.log || true
 
           echo ""
           echo "===== KEXPLOIT OPA334 ====="
-          grep -n -i -A15 -B10 \
+
+          grep -n -i \
+            -A20 \
+            -B10 \
             "kexploit_opa334" \
             build.log || true
 
           echo ""
           echo "===== CLANG ERRORS ====="
+
           grep -n -E \
             "error:|fatal error:" \
+            build.log || true
+
+          echo ""
+          echo "===== BUILD RESULT ====="
+
+          grep -n \
+            -E \
+            "BUILD SUCCEEDED|BUILD FAILED" \
             build.log || true
 
       - name: Upload build log
