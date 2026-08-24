@@ -1,40 +1,70 @@
-echo "===== START BUILD ====="
-pwd
-ls -la
+name: Build ibaal3105
 
-echo "===== XCODE VERSION ====="
-xcodebuild -version
+on:
+  workflow_dispatch:
+  push:
 
-echo "===== PROJECT FILES ====="
-find . -maxdepth 2 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) -print
+jobs:
+  build:
+    runs-on: macos-14
 
-echo "===== BUILD ====="
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-xcodebuild \
-  -project ThreeOneOSFive.xcodeproj \
-  -scheme ibaal3105 \
-  -configuration Release \
-  -sdk iphoneos \
-  CODE_SIGNING_ALLOWED=NO \
-  CODE_SIGNING_REQUIRED=NO \
-  build \
-  2>&1 | tee build.log
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+          xcodebuild -version
 
-echo "===== BUILD FINISHED ====="
-echo "===== LAST 200 LINES ====="
+      - name: Inspect project
+        run: |
+          echo "===== PROJECT FILES ====="
+          find . -maxdepth 3 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) -print
 
-tail -n 200 build.log
+      - name: Build
+        run: |
+          echo "===== START BUILD ====="
+          pwd
+          ls -la
 
-echo "===== KEXPLOIT ERRORS ====="
+          echo "===== XCODE VERSION ====="
+          xcodebuild -version
 
-grep -n -i -A15 -B10 \
-  "kexploit_opa334" \
-  build.log || true
+          echo "===== BUILD ====="
 
-echo "===== CLANG ERRORS ====="
+          xcodebuild \
+            -project ThreeOneOSFive.xcodeproj \
+            -scheme ibaal3105 \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build \
+            2>&1 | tee build.log
 
-grep -n -E \
-  "error:|fatal error:" \
-  build.log || true
+      - name: Show build diagnostics
+        if: always()
+        run: |
+          echo "===== LAST 200 LINES ====="
+          tail -n 200 build.log || true
 
-echo "===== DONE ====="
+          echo ""
+          echo "===== KEXPLOIT OPA334 ====="
+          grep -n -i -A15 -B10 \
+            "kexploit_opa334" \
+            build.log || true
+
+          echo ""
+          echo "===== CLANG ERRORS ====="
+          grep -n -E \
+            "error:|fatal error:" \
+            build.log || true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibaal3105-build-log
+          path: build.log
+          if-no-files-found: ignore
