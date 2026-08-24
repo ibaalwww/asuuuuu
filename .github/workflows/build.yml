@@ -1,42 +1,33 @@
-name: Build ibaal3105
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-jobs:
-  build:
-    runs-on: macos-14
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Show Xcode
-        run: |
-          xcodebuild -version
-          xcode-select -p
-      - name: Check project
-        run: |
-          echo "Checking project..."
-          test -f "ibaal3105/ThreeOneOSFive.xcodeproj/project.pbxproj"
-          test -f "ibaal3105/ThreeOneOSFive/views/PListEditorView.swift"
-          test -f "ibaal3105/ThreeOneOSFive/helpers/SystemPlistOverwrite.swift"
-          echo "All required files found."
-      - name: Build
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project "ibaal3105/ThreeOneOSFive.xcodeproj" \
-            -scheme "ibaal3105" \
-            -configuration Release \
-            -sdk iphoneos \
-            -arch arm64 \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            build | tee build.log
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ibaal3105-build-log
-          path: build.log
-          if-no-files-found: ignore
+set -o pipefail
+
+echo "===== CLEAN BUILD ====="
+
+xcodebuild \
+  -project ThreeOneOSFive.xcodeproj \
+  -scheme ibaal3105 \
+  -configuration Release \
+  -sdk iphoneos \
+  clean build \
+  CODE_SIGNING_ALLOWED=NO \
+  2>&1 | tee build.log
+
+BUILD_STATUS=${PIPESTATUS[0]}
+
+echo ""
+echo "===== KEXPLOIT OPA334 DIAGNOSTIC ====="
+
+grep -n -A15 -B8 \
+  -E "kexploit_opa334\.m|kexploit_opa334\.o|error:" \
+  build.log || true
+
+echo ""
+echo "===== ALL CLANG ERRORS ====="
+
+grep -n -A8 -B4 \
+  -E ":[0-9]+:[0-9]+: error:" \
+  build.log || true
+
+echo ""
+echo "===== BUILD EXIT CODE: ${BUILD_STATUS} ====="
+
+exit "$BUILD_STATUS"
