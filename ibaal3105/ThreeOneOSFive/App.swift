@@ -93,7 +93,6 @@ class AppState: ObservableObject {
     @Published var unsupportedMessage: String?
     @Published var kernelExploitRunning = false
 
-    private var autoRunAttempted = false
 
     var kernelExploitApplicable: Bool {
         KernelExploit.isApplicable(
@@ -135,17 +134,6 @@ class AppState: ObservableObject {
         guard applicable else { return }
 
         refreshKernelExploitStatus()
-        maybeAutoRunKernelExploit()
-    }
-
-    private func maybeAutoRunKernelExploit() {
-        guard !kernelExploitRunning,
-              !exploitStatus.isSuccess,
-              !exploitStatus.isFailed,
-              !autoRunAttempted else { return }
-        autoRunAttempted = true
-        log("app: starting kernel exploit automatically")
-        runKernelExploitIfNeeded()
     }
 
     private func refreshKernelExploitStatus() {
@@ -164,6 +152,16 @@ class AppState: ObservableObject {
                 log("app: sandbox access is no longer active")
             }
         }
+    }
+
+    /// True only when the existing device-access layer reports success.
+    /// This app state does not start the access mechanism automatically.
+    var deviceAccessActive: Bool {
+        exploitStatus.isSuccess
+    }
+
+    func refreshDeviceAccessStatus() {
+        refreshKernelExploitStatus()
     }
 
     func runKernelExploitIfNeeded() {
